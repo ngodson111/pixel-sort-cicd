@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      body {
+        display: flex;
+        flex-direction: column;
+      }
+
+      #before,
+      #after {
+        object-fit: cover;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+  <body>
+    <input type="file" />
+    <div class="images">
+      <img width="500" height="500" id="before" src="" />
+      <canvas id="after"></canvas>
+    </div>
+    <script>
+      const state = {
+        originalDocument: document.getElementById("before"),
+        editedDocument: document.getElementById("after"),
+      };
+      document.querySelector("input").addEventListener("change", (e) => {
+        const image = e.target.files[0];
+        const newImage = URL.createObjectURL(image);
+        state.originalDocument.src = newImage;
+        startScanning(state.originalDocument, state.editedDocument);
+      });
+
+      function startScanning(source, destination) {
+        const img = new Image();
+
+        img.src = source.src;
+
+        img.onload = function () {
+          const canvas = destination;
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const context = canvas.getContext("2d");
+          context.drawImage(img, 0, 0);
+
+          const imageData = context.getImageData(0, 0, img.width, img.height);
+          const newColorSorted = getMajorColor(imageData.data);
+
+          const newImageData = context.createImageData(img.width, img.height);
+
+          const newPixels = [];
+          for (let i = 0; i < newColorSorted.length; i++) {
+            Object.values(newColorSorted[i]).forEach((k) => newPixels.push(k));
+          }
+          for (let i = 0; i < newPixels.length; i++) {
+            newImageData.data[i] = newPixels[i];
+          }
+          context.putImageData(newImageData, 0, 0);
+        };
+      }
+
+      function getMajorColor(pixels) {
+        const newArray = [];
+        for (let i = 0, dx = 0; dx < pixels.length; i++, dx = i << 2) {
+          const r = pixels[dx];
+          const g = pixels[dx + 1];
+          const b = pixels[dx + 2];
+          const a = pixels[dx + 3];
+
+          newArray.push({ r, g, b, a });
+        }
+
+        return newArray.sort((a, b) => b.r - a.r && b.g - a.g && b.b - a.b);
+      }
+    </script>
+  </body>
+</html>
